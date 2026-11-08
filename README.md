@@ -51,6 +51,16 @@ and carry their real detail — crown points, mitre slits, the knight's mane,
 rook crenellations. Used here under the **3-clause BSD licence**, one of the
 several the author offers; the notice is in `js/vendor/pieces.LICENSE`.
 
+Both colours are given a shared top-to-bottom gradient (`gradW` / `gradB` in
+the sprite's `<defs>`, in user space so a whole piece shades as one object
+rather than each path separately). Without it the white pieces are outline
+only, with no interior contrast — they read as flat cut-outs on a light
+square, while the black pieces carry their interior linework and look far
+richer. The gradient gives both sides volume.
+
+Only **fills** are swapped for the gradients; strokes stay solid, or the
+linework dissolves.
+
 Motion is deliberately small, and exists so a move the *opponent* made is
 visible rather than simply appearing:
 
@@ -106,6 +116,16 @@ and that pinned pieces and out-of-turn moves are refused.
 that no Unicode fallback is left on the board, that moves and castling animate,
 that a capture's ghost appears and then cleans itself up, and that
 `prefers-reduced-motion` turns the motion off without affecting play.
+
+It also **rasterises every symbol and measures its colour.** A gradient
+reference that fails to resolve still yields a `<use>` that paints — it just
+paints the wrong colour — so structural checks miss it entirely. Healthy white
+pieces are 38–70% light fill and black ones 0–25%; a broken white fill reads
+exactly 0. The suite deliberately breaks a fill and confirms the check fails,
+so the test cannot quietly stop testing anything.
+
+`test/shots.mjs` is not a test: it writes reference images to `test/shots/`
+for eyeballing the artwork in both themes.
 
 `twoplayer.mjs` opens two independent browsers, connects them over the live
 broker and checks that moves, castling, chat, resignation and rematch all cross
