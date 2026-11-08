@@ -189,7 +189,9 @@ h1,h2,h3{font-weight:650;letter-spacing:-.01em}
 
 /* ---------- responsive ---------- */
 @media (max-width:880px){
-  .layout{flex-direction:column;max-width:540px}
+  /* stacked: stretch, or a column flex container shrinks the board to its
+     content width instead of letting it fill the screen */
+  .layout{flex-direction:column;align-items:stretch;max-width:540px}
   .panel{flex:1 1 auto;width:100%}
   .moves{max-height:140px}
   .sq .pc{font-size:min(10.2vw,56px)}
