@@ -16,7 +16,21 @@ const PROTO = 1;
 const $ = (s) => document.querySelector(s);
 const el = (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; };
 
-const GLYPH = { k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
+const SVGNS = 'http://www.w3.org/2000/svg';
+const NAMES = { k:'king', q:'queen', r:'rook', b:'bishop', n:'knight', p:'pawn' };
+
+/** A piece, drawn from the inline <symbol> sprite in index.html. */
+function pieceSvg(color, type, cls = 'pc') {
+  const svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 45 45');
+  svg.setAttribute('class', cls + ' ' + color);
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const use = document.createElementNS(SVGNS, 'use');
+  use.setAttribute('href', `#pc-${color}${type}`);
+  svg.appendChild(use);
+  return svg;
+}
 const FILES = 'abcdefgh';
 const VALUE = { p:1, n:3, b:3, r:5, q:9 };
 
@@ -84,16 +98,14 @@ function render() {
       const sq = el('div', 'sq ' + ((f + r) % 2 ? 'lt' : 'dk'));
       sq.dataset.square = name;
       sq.setAttribute('role', 'gridcell');
-      sq.setAttribute('aria-label', name + (piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ' empty'));
+      sq.setAttribute('aria-label', name + (piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${NAMES[piece.type]}` : ' empty'));
 
       if (last && (last.from === name || last.to === name)) sq.classList.add('last');
       if (checkSq === name) sq.classList.add('check');
       if (S.selected === name) sq.classList.add('sel');
 
       if (piece) {
-        const p = el('span', 'pc ' + piece.color);
-        p.textContent = GLYPH[piece.type];
-        sq.appendChild(p);
+        sq.appendChild(pieceSvg(piece.color, piece.type));
         if (canPickUp(piece)) sq.classList.add('movable');
       }
 
@@ -175,12 +187,78 @@ function paintCaptured() {
     taken[victim].push(m.captured);
   }
   const sum = (a) => a.reduce((n, t) => n + (VALUE[t] || 0), 0);
-  const show = (lost) => lost.sort((a, b) => (VALUE[b] || 0) - (VALUE[a] || 0))
-                             .map((t) => GLYPH[t]).join('');
   const theirColor = S.myColor === 'w' ? 'b' : 'w';
   const myEdge = sum(taken[theirColor]) - sum(taken[S.myColor]);
-  $('#capBottom').textContent = show(taken[theirColor]) + (myEdge > 0 ? ` +${myEdge}` : '');
-  $('#capTop').textContent = show(taken[S.myColor]) + (myEdge < 0 ? ` +${-myEdge}` : '');
+  const fill = (node, lost, color, edge) => {
+    node.innerHTML = '';
+    lost.sort((a, b) => (VALUE[b] || 0) - (VALUE[a] || 0))
+        .forEach((t) => node.appendChild(pieceSvg(color, t, 'cap-pc')));
+    if (edge > 0) { const tag = el('span', 'edge'); tag.textContent = `+${edge}`; node.appendChild(tag); }
+  };
+  fill($('#capBottom'), taken[theirColor], theirColor, myEdge);
+  fill($('#capTop'), taken[S.myColor], S.myColor, -myEdge);
+}
+
+/* ================= animation =================
+   Pieces slide to where they land and captured pieces fade out, so a move
+   the opponent made is visible rather than just appearing. Everything here
+   is decoration: if it is skipped the position on the board is identical. */
+const reduceMotion = () =>
+  window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const sqEl = (name) => boardEl.querySelector(`.sq[data-square="${name}"]`);
+
+/** Grid position of a square as currently drawn (col/row from the top left). */
+function gridPos(name) {
+  const f = FILES.indexOf(name[0]);
+  const r = +name[1] - 1;
+  return { col: S.flipped ? 7 - f : f, row: S.flipped ? r : 7 - r };
+}
+
+/** Slide the piece now sitting on `to` in from where it came. */
+function slide(from, to, delay = 0) {
+  const sq = sqEl(to);
+  const pc = sq && sq.querySelector('.pc');
+  if (!pc) return;
+  const w = sq.getBoundingClientRect().width;
+  if (!w) return;
+  const a = gridPos(from), b = gridPos(to);
+  const dx = (a.col - b.col) * w, dy = (a.row - b.row) * w;
+  if (!dx && !dy) return;
+  pc.animate(
+    [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
+    { duration: 200, delay, easing: 'cubic-bezier(.22,.68,.3,1)', fill: 'backwards' });
+}
+
+/** Leave a fading copy of a captured piece on the square it was taken from. */
+function fadeCapture(square, color, type) {
+  const sq = sqEl(square);
+  if (!sq) return;
+  const g = el('div', 'ghost');
+  g.appendChild(pieceSvg(color, type, 'pc'));
+  sq.appendChild(g);
+  const a = g.animate(
+    [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.66)' }],
+    { duration: 260, easing: 'ease-out' });
+  a.onfinish = () => g.remove();
+  a.oncancel = () => g.remove();
+}
+
+/** Called straight after render(), for the move that was just played. */
+function animateMove(mv) {
+  if (!mv || reduceMotion()) return;
+  if (mv.captured) {
+    // en passant takes a pawn that is not on the destination square
+    const victim = mv.flags.includes('e') ? mv.to[0] + mv.from[1] : mv.to;
+    fadeCapture(victim, mv.color === 'w' ? 'b' : 'w', mv.captured);
+  }
+  slide(mv.from, mv.to);
+  if (mv.flags.includes('k') || mv.flags.includes('q')) {
+    // castling moves the rook too; it follows a beat behind the king
+    const rank = mv.color === 'w' ? '1' : '8';
+    const [rf, rt] = mv.flags.includes('k') ? ['h', 'f'] : ['a', 'd'];
+    slide(rf + rank, rt + rank, 60);
+  }
 }
 
 /* ================= move input ================= */
@@ -222,8 +300,9 @@ function showPromo() {
   row.innerHTML = '';
   for (const t of ['q', 'r', 'b', 'n']) {
     const b = el('button');
-    b.textContent = GLYPH[t];
+    b.appendChild(pieceSvg(S.myColor, t, 'promo-pc'));
     b.title = { q:'Queen', r:'Rook', b:'Bishop', n:'Knight' }[t];
+    b.setAttribute('aria-label', b.title);
     b.onclick = () => {
       wrap.classList.add('hidden');
       const mv = { ...S.pendingPromo, promotion: t };
@@ -246,7 +325,9 @@ function commitMove(mv) {
 }
 
 function afterMove() {
+  const mv = S.game.history({ verbose: true }).slice(-1)[0];
   render();
+  animateMove(mv);
   paintMoves();
   checkEnd();
 }
@@ -602,7 +683,7 @@ $('#joinCode').addEventListener('input', (e) => {
 // Debug/test handle. Safe by construction: each side validates every incoming
 // move against its own rules engine, so local state is not a trust boundary --
 // an edited client can only produce moves its opponent will reject.
-window.__chess = { state: S, render, paintMoves, checkEnd };
+window.__chess = { state: S, render, paintMoves, checkEnd, animateMove };
 
 (function boot() {
   if (typeof Peer === 'undefined') {
