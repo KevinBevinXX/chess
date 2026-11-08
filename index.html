@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Chess — play a friend on another computer</title>
+<meta name="description" content="Peer-to-peer online chess. Share a code, play from two different computers. No account, no server.">
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#9819;</text></svg>">
+<script src="js/vendor/peerjs.min.js"></script>
+</head>
+<body>
+
+<!-- ============ LOBBY ============ -->
+<main id="lobby" class="screen">
+  <div class="lobby-card">
+    <h1><span class="k">&#9819;</span> Chess</h1>
+    <p class="tagline">Two players, two computers. Share a code and play.</p>
+
+    <div id="lobbyChoice" class="stack">
+      <button id="btnHost" class="btn btn-primary">Start a new game</button>
+      <div class="or"><span>or</span></div>
+      <form id="joinForm" class="join-row" autocomplete="off">
+        <input id="joinCode" class="code-input" placeholder="GAME CODE" maxlength="7"
+               inputmode="text" autocapitalize="characters" spellcheck="false" aria-label="Game code">
+        <button type="submit" class="btn">Join</button>
+      </form>
+      <details class="side">
+        <summary>Play colour</summary>
+        <div class="radio-row">
+          <label><input type="radio" name="side" value="w" checked> White</label>
+          <label><input type="radio" name="side" value="b"> Black</label>
+          <label><input type="radio" name="side" value="r"> Random</label>
+        </div>
+      </details>
+    </div>
+
+    <div id="lobbyWait" class="stack hidden">
+      <p class="wait-label">Your game code</p>
+      <div class="code-display" id="codeDisplay">------</div>
+      <button class="btn btn-copy" id="btnCopyCode">Copy invite link</button>
+      <p class="hint">Send the code <em>or</em> the link to your opponent. Keep this
+         tab open &mdash; the game lives in your browser, not on a server.</p>
+      <p class="spinner-row"><span class="spinner"></span> <span id="waitStatus">Waiting for your opponent&hellip;</span></p>
+      <button class="btn btn-quiet" id="btnCancelHost">Cancel</button>
+    </div>
+
+    <div id="lobbyError" class="err hidden"></div>
+  </div>
+  <footer class="credit">Peer-to-peer over WebRTC &middot; rules by chess.js &middot; no account, nothing stored</footer>
+</main>
+
+<!-- ============ GAME ============ -->
+<main id="game" class="screen hidden">
+  <div class="layout">
+
+    <section class="board-col">
+      <div class="player-strip" id="stripTop">
+        <span class="dot" id="dotTop"></span>
+        <span class="who" id="nameTop">Opponent</span>
+        <span class="captured" id="capTop"></span>
+      </div>
+
+      <div class="board-wrap">
+        <div id="board" class="board" role="grid" aria-label="Chess board"></div>
+        <div id="promo" class="promo hidden" role="dialog" aria-label="Choose promotion piece">
+          <p>Promote to</p>
+          <div class="promo-row"></div>
+        </div>
+        <div id="overlay" class="overlay hidden">
+          <div class="overlay-box">
+            <h2 id="overTitle">Checkmate</h2>
+            <p id="overText"></p>
+            <div class="overlay-btns">
+              <button class="btn btn-primary" id="btnRematch">Rematch</button>
+              <button class="btn btn-quiet" id="btnOverClose">View board</button>
+            </div>
+            <p class="rematch-note hidden" id="rematchNote"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-strip" id="stripBottom">
+        <span class="dot on" id="dotBottom"></span>
+        <span class="who" id="nameBottom">You</span>
+        <span class="captured" id="capBottom"></span>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="status-box">
+        <div class="conn" id="conn"><span class="dot"></span><span id="connText">connecting</span></div>
+        <div class="turn" id="status">&nbsp;</div>
+      </div>
+
+      <div class="moves-box">
+        <h3>Moves</h3>
+        <ol id="moveList" class="moves" start="1"></ol>
+      </div>
+
+      <div class="chat-box">
+        <h3>Chat</h3>
+        <div id="chatLog" class="chat-log"></div>
+        <form id="chatForm" class="chat-form" autocomplete="off">
+          <input id="chatInput" placeholder="Say something&hellip;" maxlength="200" aria-label="Chat message">
+          <button class="btn btn-sm" type="submit">Send</button>
+        </form>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-sm" id="btnFlip">Flip</button>
+        <button class="btn btn-sm btn-danger" id="btnResign">Resign</button>
+        <button class="btn btn-sm btn-quiet" id="btnLeave">Leave</button>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

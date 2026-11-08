@@ -1,0 +1,11 @@
+{
+  "name": "multiplayer-chess-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node rules.mjs && node twoplayer.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.65.0"
+  }
+}
