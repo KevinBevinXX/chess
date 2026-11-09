@@ -4,7 +4,7 @@ Two-player online chess that runs entirely on GitHub Pages. One player starts a
 game and gets a five-character code; the other enters it, and the two browsers
 play directly to each other.
 
-**Play:** https://kevinbevinxx.github.io/multiplayer-chess/
+**Play:** https://kevinbevinxx.github.io/chess/
 
 ## How two computers reach each other without a server
 
@@ -105,7 +105,7 @@ node mobile.mjs                # phone layout
 ```
 
 Point them at the deployed site instead with
-`SITE=https://kevinbevinxx.github.io/multiplayer-chess/`.
+`SITE=https://kevinbevinxx.github.io/chess/`.
 
 `rules.mjs` plays real positions through the interface and checks en passant,
 both castlings, castling out of an attacked path, promotion, checkmate,

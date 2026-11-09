@@ -1,5 +1,5 @@
 {
-  "name": "multiplayer-chess-tests",
+  "name": "chess-tests",
   "private": true,
   "type": "module",
   "scripts": {
